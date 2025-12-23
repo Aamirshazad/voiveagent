@@ -130,7 +130,7 @@ const App: React.FC = () => {
     }
   };
 
-  const stopSession = async () => {
+  const stopSession = async (clearHistory: boolean = false) => {
     if (sessionPromiseRef.current) {
       const session = await sessionPromiseRef.current;
       session.close();
@@ -138,6 +138,22 @@ const App: React.FC = () => {
     }
     setIsConnected(false);
     setIsSpeaking(false);
+    if (clearHistory) {
+      setTranscriptions([]);
+      currentTranscriptionsRef.current = { user: '', model: '' };
+    }
+  };
+
+  // Handle module switch - starts fresh session with new module
+  const handleModuleSwitch = async (newModule: LearningModule) => {
+    if (newModule === activeModule) return;
+
+    // Stop current session and clear conversation
+    await stopSession(true);
+
+    // Set new module
+    setActiveModule(newModule);
+    setError(null);
   };
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -175,10 +191,7 @@ const App: React.FC = () => {
                   module={m}
                   isActive={activeModule === m}
                   icon={MODULE_ICONS[m]}
-                  onClick={() => {
-                    setActiveModule(m);
-                    if (isConnected) setError("Module changed. Please restart session.");
-                  }}
+                  onClick={() => handleModuleSwitch(m)}
                 />
               ))}
             </div>
@@ -211,8 +224,8 @@ const App: React.FC = () => {
           <button
             onClick={() => isConnected ? stopSession() : startSession()}
             className={`w-full py-3.5 rounded-xl font-bold text-sm uppercase tracking-wide transition-all duration-200 shadow-lg active:translate-y-0.5 ${isConnected
-                ? 'bg-gradient-to-r from-rose-500 to-red-500 text-white hover:from-rose-600 hover:to-red-600 shadow-rose-500/30'
-                : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600 shadow-emerald-500/30'
+              ? 'bg-gradient-to-r from-rose-500 to-red-500 text-white hover:from-rose-600 hover:to-red-600 shadow-rose-500/30'
+              : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600 shadow-emerald-500/30'
               }`}
           >
             {isConnected ? '🛑 End Session' : '🎙️ Start Learning'}
@@ -296,8 +309,8 @@ const App: React.FC = () => {
                 >
                   <div className={`flex items-center gap-2 mb-2 ${entry.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                     <span className={`text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${entry.role === 'user'
-                        ? 'bg-blue-50 border-blue-200 text-blue-700'
-                        : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      ? 'bg-blue-50 border-blue-200 text-blue-700'
+                      : 'bg-emerald-50 border-emerald-200 text-emerald-700'
                       }`}>
                       {entry.role === 'user' ? '👤 You' : '🤖 AI Coach'}
                     </span>
@@ -307,8 +320,8 @@ const App: React.FC = () => {
                   </div>
 
                   <div className={`px-6 py-4 rounded-2xl border shadow-sm text-sm leading-relaxed max-w-[85%] ${entry.role === 'user'
-                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-400 text-white rounded-tr-sm'
-                      : 'bg-white border-slate-200 text-slate-800 rounded-tl-sm'
+                    ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-400 text-white rounded-tr-sm'
+                    : 'bg-white border-slate-200 text-slate-800 rounded-tl-sm'
                     }`}>
                     {entry.text}
                   </div>
