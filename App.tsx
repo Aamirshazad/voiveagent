@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { Scenario, TranscriptionEntry } from './types';
 import { SYSTEM_INSTRUCTIONS, DEFAULT_SCENARIO, INITIAL_MESSAGE } from './constants';
@@ -41,7 +41,11 @@ const App: React.FC = () => {
 
   const startSession = async () => {
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = (process.env as any).API_KEY;
+      if (!apiKey) {
+        throw new Error("API Key is missing in environment variables.");
+      }
+      const ai = new GoogleGenAI({ apiKey });
       const { input: inputCtx, output: outputCtx } = await initAudio();
       
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -69,8 +73,8 @@ const App: React.FC = () => {
             scriptProcessor.connect(inputCtx.destination);
           },
           onmessage: async (message: LiveServerMessage) => {
-            // Handle Audio Data
-            const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+            // Handle Audio Data - Fixed optional chaining for TS
+            const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (base64Audio) {
               setIsSpeaking(true);
               const { output } = audioContextsRef.current!;
@@ -141,9 +145,9 @@ const App: React.FC = () => {
 
       sessionPromiseRef.current = sessionPromise;
 
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Failed to start session. Ensure microphone access is granted.");
+      setError(err.message || "Failed to start session. Ensure microphone access is granted.");
     }
   };
 
