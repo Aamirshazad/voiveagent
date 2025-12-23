@@ -1,0 +1,7 @@
+{
+  "name": "FluentGenie - AI English Accent Coach",
+  "description": "An advanced English learning platform using Gemini Live API for real-time conversational practice, accent coaching, and immersive language acquisition.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
