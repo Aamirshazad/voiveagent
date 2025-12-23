@@ -8,12 +8,12 @@ import AudioVisualizer from './components/AudioVisualizer';
 import { createBlob, decode, decodeAudioData } from './services/audioService';
 
 const MODULE_ICONS: Record<LearningModule, string> = {
-  [LearningModule.SALES_PRESENCE]: '🎙️',
-  [LearningModule.PRODUCT_PITCH]: '🚀',
-  [LearningModule.BIZ_DEV]: '🤝',
-  [LearningModule.PM_STRATEGY]: '📊',
-  [LearningModule.NEGOTIATION]: '⚖️',
-  [LearningModule.MARKET_INTEL]: '🌐'
+  [LearningModule.PRONUNCIATION]: '🗣️',
+  [LearningModule.CONVERSATION]: '💬',
+  [LearningModule.GRAMMAR_VOCAB]: '📚',
+  [LearningModule.BUSINESS_ENGLISH]: '💼',
+  [LearningModule.TEST_PREP]: '🎯',
+  [LearningModule.ACCENT_REDUCTION]: '🌍'
 };
 
 const App: React.FC = () => {
@@ -40,14 +40,14 @@ const App: React.FC = () => {
 
   const startSession = async () => {
     try {
-      const ai = new GoogleGenAI({ 
+      const ai = new GoogleGenAI({
         apiKey: process.env.API_KEY as string,
         httpOptions: { "apiVersion": "v1alpha" } // Required for Affective Dialog
       });
-      
+
       const { input: inputCtx, output: outputCtx } = await initAudio();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
+
       const sessionPromise = ai.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         callbacks: {
@@ -115,10 +115,10 @@ const App: React.FC = () => {
         },
         config: {
           responseModalities: [Modality.AUDIO],
-          enableAffectiveDialog: true, 
+          enableAffectiveDialog: true,
           systemInstruction: SYSTEM_INSTRUCTIONS[activeModule],
-          speechConfig: { 
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } 
+          speechConfig: {
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } }
           },
           inputAudioTranscription: {},
           outputAudioTranscription: {}
@@ -146,27 +146,27 @@ const App: React.FC = () => {
   }, [transcriptions]);
 
   return (
-    <div className="flex h-screen bg-[#020617] text-slate-200 overflow-hidden font-inter selection:bg-indigo-500/30">
-      
-      {/* Sidebar: Command & Control */}
-      <aside className="w-80 flex-shrink-0 bg-[#0B1121] border-r border-slate-800/60 flex flex-col z-20 shadow-2xl relative">
-        <div className="p-6 border-b border-slate-800/60 bg-[#0B1121] z-10">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-600 to-indigo-800 flex items-center justify-center font-outfit font-black text-white shadow-lg shadow-indigo-600/20 border border-indigo-400/20">
-              FG
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 to-blue-50 text-slate-800 overflow-hidden font-inter selection:bg-emerald-500/30">
+
+      {/* Sidebar: Learning Modules */}
+      <aside className="w-80 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col z-20 shadow-xl relative">
+        <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-emerald-500 to-teal-500">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center font-outfit font-black text-white shadow-lg border border-white/30">
+              <span className="text-2xl">🌟</span>
             </div>
             <div>
-              <h1 className="font-outfit font-bold text-lg tracking-tight text-white leading-none">FluentGenie</h1>
-              <p className="text-[10px] uppercase tracking-[0.25em] text-indigo-400 font-semibold mt-1">Enterprise</p>
+              <h1 className="font-outfit font-bold text-xl tracking-tight text-white leading-none">English Mastery</h1>
+              <p className="text-xs text-emerald-50 font-medium mt-0.5">AI Language Learning Portal</p>
             </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-6">
+        <div className="flex-1 overflow-y-auto p-5 custom-scrollbar space-y-6 bg-slate-50">
           <div>
             <div className="flex items-center justify-between px-2 mb-4">
-               <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Training Protocol</h2>
-               <span className="text-[9px] font-mono text-slate-600 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">V.2.5</span>
+              <h2 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Learning Modules</h2>
+              <span className="text-xs font-mono text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">6 Available</span>
             </div>
             <div className="space-y-3">
               {(Object.values(LearningModule) as LearningModule[]).map((m) => (
@@ -177,7 +177,7 @@ const App: React.FC = () => {
                   icon={MODULE_ICONS[m]}
                   onClick={() => {
                     setActiveModule(m);
-                    if (isConnected) setError("Protocol switch detected. Reset required.");
+                    if (isConnected) setError("Module changed. Please restart session.");
                   }}
                 />
               ))}
@@ -185,120 +185,131 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Biometrics Panel */}
-        <div className="p-4 bg-[#0F172A] border-t border-slate-800/60 z-10">
-           <div className="bg-slate-900/80 rounded-xl p-4 border border-slate-800 mb-4 shadow-inner">
-             <div className="flex justify-between items-center mb-3">
-               <div className="flex items-center gap-2">
-                 <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-700'}`}></div>
-                 <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Voice Stream</span>
-               </div>
-               <div className="flex gap-0.5">
-                 {[1,2,3,4,5].map(i => <div key={i} className={`w-0.5 h-2 rounded-full transition-all duration-300 ${isConnected ? 'bg-indigo-500' : 'bg-slate-800'}`} style={{opacity: isConnected ? 1 : 0.3}}></div>)}
-               </div>
-             </div>
-             
-             <div className="h-12 flex items-center justify-center bg-slate-950/50 rounded-lg border border-slate-800/50 overflow-hidden">
-                <AudioVisualizer isActive={isConnected} isSpeaking={isSpeaking} />
-             </div>
-             
-             <div className="mt-3 flex justify-between text-[9px] font-mono text-slate-500">
-                <span>IN: {isConnected ? '16kHz PCM' : '---'}</span>
-                <span>OUT: {isConnected ? '24kHz PCM' : '---'}</span>
-             </div>
-           </div>
-           
-           <button 
-             onClick={() => isConnected ? stopSession() : startSession()}
-             className={`w-full py-3.5 rounded-lg font-bold text-[11px] uppercase tracking-[0.15em] transition-all duration-200 border shadow-lg active:translate-y-0.5 ${
-               isConnected 
-                 ? 'bg-rose-950/30 text-rose-500 border-rose-500/30 hover:bg-rose-900/50 hover:border-rose-500/50 shadow-rose-900/10' 
-                 : 'bg-indigo-600 text-white border-indigo-400/30 hover:bg-indigo-500 hover:border-indigo-300/50 shadow-indigo-900/20'
-             }`}
-           >
-             {isConnected ? 'End Session' : 'Start Session'}
-           </button>
+        {/* Audio Status Panel */}
+        <div className="p-5 bg-white border-t border-slate-200">
+          <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-4 border border-slate-200 mb-4 shadow-sm">
+            <div className="flex justify-between items-center mb-3">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse shadow-lg shadow-emerald-500/50' : 'bg-slate-300'}`}></div>
+                <span className="text-xs font-semibold text-slate-700">Voice Stream</span>
+              </div>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map(i => <div key={i} className={`w-1 h-3 rounded-full transition-all duration-300 ${isConnected ? 'bg-emerald-500' : 'bg-slate-300'}`} style={{ opacity: isConnected ? 1 : 0.3 }}></div>)}
+              </div>
+            </div>
+
+            <div className="h-14 flex items-center justify-center bg-white rounded-lg border border-slate-200 overflow-hidden shadow-inner">
+              <AudioVisualizer isActive={isConnected} isSpeaking={isSpeaking} />
+            </div>
+
+            <div className="mt-3 flex justify-between text-xs font-mono text-slate-500">
+              <span>IN: {isConnected ? '16kHz' : '---'}</span>
+              <span>OUT: {isConnected ? '24kHz' : '---'}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => isConnected ? stopSession() : startSession()}
+            className={`w-full py-3.5 rounded-xl font-bold text-sm uppercase tracking-wide transition-all duration-200 shadow-lg active:translate-y-0.5 ${isConnected
+                ? 'bg-gradient-to-r from-rose-500 to-red-500 text-white hover:from-rose-600 hover:to-red-600 shadow-rose-500/30'
+                : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600 shadow-emerald-500/30'
+              }`}
+          >
+            {isConnected ? '🛑 End Session' : '🎙️ Start Learning'}
+          </button>
         </div>
       </aside>
 
-      {/* Main Terminal Area */}
-      <main className="flex-1 flex flex-col relative bg-[#020617] bg-grid">
-        <div className="absolute inset-0 bg-gradient-to-b from-indigo-900/5 via-transparent to-slate-900/20 pointer-events-none"></div>
-        
+      {/* Main Learning Area */}
+      <main className="flex-1 flex flex-col relative bg-gradient-to-br from-white to-slate-50">
+
         {/* Status Header */}
-        <header className="h-14 flex-shrink-0 border-b border-slate-800/60 bg-slate-950/80 backdrop-blur-md flex items-center justify-between px-6 z-20 sticky top-0">
+        <header className="h-16 flex-shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 z-20 sticky top-0 shadow-sm">
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-900 rounded-full border border-slate-800">
-              <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]' : 'bg-slate-600'}`}></div>
-              <span className={`text-[10px] font-mono font-medium uppercase tracking-wider ${isConnected ? 'text-emerald-400' : 'text-slate-500'}`}>
-                {isConnected ? 'System Online' : 'Offline'}
+            <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-full border border-slate-200">
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 shadow-lg shadow-emerald-500/50' : 'bg-slate-400'}`}></div>
+              <span className={`text-xs font-semibold uppercase tracking-wide ${isConnected ? 'text-emerald-600' : 'text-slate-500'}`}>
+                {isConnected ? '✓ Connected' : 'Offline'}
               </span>
             </div>
-            
-            <div className="hidden md:flex items-center gap-2 text-[10px] font-mono text-slate-500 uppercase tracking-wider">
-               <span>LATENCY: {isConnected ? '24ms' : '--'}</span>
-               <span className="text-slate-700">|</span>
-               <span>MODEL: Gemini-2.5-Native</span>
+
+            <div className="hidden md:flex items-center gap-4 text-xs text-slate-600">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold">Module:</span>
+                <span className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-200">{activeModule}</span>
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-             {error && (
-                <div className="px-3 py-1 bg-rose-500/10 border border-rose-500/20 rounded-md flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse"></span>
-                  <span className="text-[10px] font-bold text-rose-400 uppercase tracking-wide">{error}</span>
-                </div>
-             )}
-             <div className="px-3 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded text-[10px] font-bold text-indigo-300 uppercase tracking-wider shadow-[0_0_10px_rgba(99,102,241,0.1)]">
-               Affective Dialog: ON
-             </div>
+            {error && (
+              <div className="px-4 py-2 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-2">
+                <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse"></span>
+                <span className="text-xs font-semibold text-rose-600">{error}</span>
+              </div>
+            )}
+            <div className="px-4 py-2 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg text-xs font-semibold text-purple-700 shadow-sm">
+              🤖 AI Coach: Active
+            </div>
           </div>
         </header>
 
-        {/* Transcript Container */}
-        <div className="flex-1 overflow-hidden relative flex flex-col z-10">
-          <div 
+        {/* Conversation Container */}
+        <div className="flex-1 overflow-hidden relative flex flex-col">
+          <div
             ref={scrollRef}
             className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar scroll-smooth"
           >
             {transcriptions.length === 0 ? (
-               <div className="h-full flex flex-col items-center justify-center select-none">
-                 <div className="w-32 h-32 bg-gradient-to-tr from-slate-900 to-slate-800 rounded-full border border-slate-700/50 flex items-center justify-center mb-8 shadow-2xl relative">
-                   <div className="absolute inset-0 rounded-full border border-white/5"></div>
-                   <span className="text-5xl opacity-50 grayscale">🎙️</span>
-                 </div>
-                 <h2 className="text-xl font-outfit font-bold text-slate-200 mb-3 tracking-tight">Ready to Practice</h2>
-                 <p className="text-xs font-mono text-slate-500 text-center max-w-sm leading-relaxed">
-                   {INITIAL_MESSAGE}<br/>
-                   <span className="opacity-50">Microphone access required for real-time coaching.</span>
-                 </p>
-               </div>
+              <div className="h-full flex flex-col items-center justify-center select-none">
+                <div className="w-32 h-32 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center mb-6 shadow-2xl shadow-emerald-500/20 relative animate-float">
+                  <div className="absolute inset-0 rounded-full border-4 border-white/30"></div>
+                  <span className="text-6xl">🎓</span>
+                </div>
+                <h2 className="text-2xl font-outfit font-bold text-slate-800 mb-3 tracking-tight">Ready to Learn English!</h2>
+                <p className="text-sm text-slate-600 text-center max-w-md leading-relaxed">
+                  {INITIAL_MESSAGE}<br />
+                  <span className="text-emerald-600 font-medium">Click "Start Learning" to begin your practice session.</span>
+                </p>
+
+                <div className="mt-8 grid grid-cols-3 gap-4 text-center">
+                  <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                    <div className="text-2xl mb-2">🗣️</div>
+                    <div className="text-xs font-semibold text-slate-700">Speak Naturally</div>
+                  </div>
+                  <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                    <div className="text-2xl mb-2">👂</div>
+                    <div className="text-xs font-semibold text-slate-700">Get Feedback</div>
+                  </div>
+                  <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                    <div className="text-2xl mb-2">📈</div>
+                    <div className="text-xs font-semibold text-slate-700">Track Progress</div>
+                  </div>
+                </div>
+              </div>
             ) : (
               transcriptions.map((entry) => (
-                <div 
-                  key={entry.id} 
-                  className={`flex flex-col max-w-4xl w-full ${
-                    entry.role === 'user' ? 'items-end ml-auto' : 'items-start mr-auto'
-                  } animate-fade-in-up`}
+                <div
+                  key={entry.id}
+                  className={`flex flex-col max-w-4xl w-full ${entry.role === 'user' ? 'items-end ml-auto' : 'items-start mr-auto'
+                    } animate-fade-in-up`}
                 >
-                  <div className={`flex items-center gap-2 mb-1.5 ${entry.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                     <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${
-                      entry.role === 'user' 
-                        ? 'bg-indigo-950/30 border-indigo-500/30 text-indigo-300' 
-                        : 'bg-emerald-950/30 border-emerald-500/30 text-emerald-300'
-                    }`}>
-                      {entry.role === 'user' ? 'You' : 'Coach'}
+                  <div className={`flex items-center gap-2 mb-2 ${entry.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <span className={`text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${entry.role === 'user'
+                        ? 'bg-blue-50 border-blue-200 text-blue-700'
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      }`}>
+                      {entry.role === 'user' ? '👤 You' : '🤖 AI Coach'}
                     </span>
-                    <span className="text-[9px] font-mono text-slate-600">
+                    <span className="text-xs text-slate-400">
                       {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                   </div>
-                  
-                  <div className={`px-6 py-4 rounded-lg border backdrop-blur-sm shadow-sm text-sm leading-relaxed max-w-[90%] md:max-w-[80%] ${
-                    entry.role === 'user' 
-                      ? 'bg-indigo-600/10 border-indigo-500/20 text-indigo-50 rounded-tr-none' 
-                      : 'bg-[#0F172A]/80 border-slate-700/50 text-slate-200 rounded-tl-none'
-                  }`}>
+
+                  <div className={`px-6 py-4 rounded-2xl border shadow-sm text-sm leading-relaxed max-w-[85%] ${entry.role === 'user'
+                      ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-400 text-white rounded-tr-sm'
+                      : 'bg-white border-slate-200 text-slate-800 rounded-tl-sm'
+                    }`}>
                     {entry.text}
                   </div>
                 </div>
@@ -308,11 +319,12 @@ const App: React.FC = () => {
         </div>
 
         {/* Footer Info Bar */}
-        <footer className="h-9 border-t border-slate-800/60 bg-[#0B1121] flex items-center justify-between px-6 text-[9px] font-mono text-slate-600 uppercase tracking-wider z-20">
-           <div className="flex items-center gap-4">
-             <span>FluentGenie Enterprise</span>
-           </div>
-           <div>SESSION ID: {isConnected ? Math.random().toString(36).substr(2, 8).toUpperCase() : '---'}</div>
+        <footer className="h-12 border-t border-slate-200 bg-white flex items-center justify-between px-8 text-xs text-slate-500">
+          <div className="flex items-center gap-6">
+            <span className="font-semibold">English Mastery Portal</span>
+            <span className="text-emerald-600">Powered by Google Gemini AI</span>
+          </div>
+          <div className="font-mono">Session: {isConnected ? Math.random().toString(36).substr(2, 8).toUpperCase() : '---'}</div>
         </footer>
       </main>
     </div>
