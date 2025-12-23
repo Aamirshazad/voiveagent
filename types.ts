@@ -5,7 +5,7 @@ export enum LearningModule {
   BIZ_DEV = 'Strategic Partnerships',
   PM_STRATEGY = 'Tech-to-Biz Translation',
   NEGOTIATION = 'Deal Logic & Closing',
-  LEADERSHIP = 'Executive Influence'
+  MARKET_INTEL = 'Competitive Intelligence'
 }
 
 export type Scenario = string;
