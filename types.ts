@@ -42,3 +42,28 @@ export interface AudioConfig {
   sampleRate: number;
   channels: number;
 }
+
+// --- Gemini 3.1 Live API Session Management Types ---
+
+export enum ConnectionState {
+  DISCONNECTED = 'disconnected',
+  CONNECTING = 'connecting',
+  CONNECTED = 'connected',
+  RECONNECTING = 'reconnecting',
+}
+
+export interface SessionResumptionState {
+  handle: string | null;
+  resumable: boolean;
+  lastUpdated: number;
+}
+
+export interface SessionConfig {
+  model: string;
+  apiVersion: string;
+  inputSampleRate: number;
+  outputSampleRate: number;
+  audioBufferSize: number;
+  maxReconnectAttempts: number;
+  reconnectBaseDelayMs: number;
+}
