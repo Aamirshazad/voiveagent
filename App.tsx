@@ -82,6 +82,12 @@ const App: React.FC = () => {
 
   const startSession = useCallback(async (resumeHandle?: string | null) => {
     try {
+      // Clean up any previous session before starting a new one
+      if (sessionRef.current) {
+        try { sessionRef.current.close(); } catch { /* ignore */ }
+        sessionRef.current = null;
+      }
+
       setConnectionState(resumeHandle ? ConnectionState.RECONNECTING : ConnectionState.CONNECTING);
       setError(null);
       setGoAwayWarning(null);
@@ -98,42 +104,90 @@ const App: React.FC = () => {
       }
       const stream = mediaStreamRef.current;
 
+      // Build config — only include sessionResumption when we have a real handle
+      const liveConfig: Record<string, any> = {
+        responseModalities: [Modality.AUDIO],
+        systemInstruction: {
+          parts: [{ text: SYSTEM_INSTRUCTIONS[activeModuleRef.current] }],
+        },
+        speechConfig: {
+          voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
+        },
+        inputAudioTranscription: {},
+        outputAudioTranscription: {},
+        // Context window compression for unlimited sessions
+        contextWindowCompression: {
+          slidingWindow: {},
+        },
+      };
+
+      // Only add sessionResumption if we have a valid handle
+      if (resumeHandle) {
+        liveConfig.sessionResumption = { handle: resumeHandle };
+      }
+
+      // Track whether audio pipeline has been set up for this session
+      let audioStarted = false;
+
       const session = await ai.live.connect({
         model: SESSION_CONFIG.model,
         callbacks: {
           onopen: () => {
+            console.log('[LiveAPI] WebSocket opened');
+            // IMPORTANT: Set sessionRef FIRST, before anything else
+            sessionRef.current = session;
+            connectionStateRef.current = ConnectionState.CONNECTED;
             setConnectionState(ConnectionState.CONNECTED);
             setError(null);
             setGoAwayWarning(null);
             reconnectionManagerRef.current.reset();
 
-            // Set up audio input pipeline with AudioWorklet
-            const source = inputCtx.createMediaStreamSource(stream);
-            const workletNode = new AudioWorkletNode(inputCtx, 'audio-processor');
+            // Delay audio pipeline setup to let server process the setup message
+            setTimeout(() => {
+              // Guard: only set up audio once per session, and only if still connected
+              if (audioStarted || connectionStateRef.current !== ConnectionState.CONNECTED) return;
+              if (sessionRef.current !== session) return; // Session changed during delay
+              audioStarted = true;
 
-            workletNode.port.onmessage = (e) => {
-              const inputData = e.data; // Float32Array from worklet
-              if (sessionRef.current && connectionStateRef.current === ConnectionState.CONNECTED) {
-                const blob = createBlob(inputData);
-                try {
-                  sessionRef.current.sendRealtimeInput({
-                    audio: {
-                      mimeType: blob.mimeType,
-                      data: blob.data
-                    }
-                  });
-                } catch (e) {
-                  console.debug('Audio stream paused: socket not ready');
-                }
+              // Disconnect previous audio nodes if any
+              if (sourceNodeRef.current) {
+                try { sourceNodeRef.current.disconnect(); } catch { /* ignore */ }
               }
-            };
+              if (scriptProcessorRef.current) {
+                try { scriptProcessorRef.current.disconnect(); } catch { /* ignore */ }
+              }
 
-            source.connect(workletNode);
-            workletNode.connect(inputCtx.destination);
+              // Set up audio input pipeline with AudioWorklet
+              const source = inputCtx.createMediaStreamSource(stream);
+              const workletNode = new AudioWorkletNode(inputCtx, 'audio-processor');
 
-            // Store refs for cleanup
-            sourceNodeRef.current = source;
-            scriptProcessorRef.current = workletNode as any; // Using existing ref name for convenience
+              workletNode.port.onmessage = (e) => {
+                const inputData = e.data; // Float32Array from worklet
+                // Use the local `session` variable — not sessionRef which could point elsewhere
+                if (session && connectionStateRef.current === ConnectionState.CONNECTED && sessionRef.current === session) {
+                  const blob = createBlob(inputData);
+                  try {
+                    session.sendRealtimeInput({
+                      audio: {
+                        mimeType: blob.mimeType,
+                        data: blob.data
+                      }
+                    });
+                  } catch (sendErr) {
+                    console.debug('[LiveAPI] Audio send skipped:', (sendErr as Error).message);
+                  }
+                }
+              };
+
+              source.connect(workletNode);
+              workletNode.connect(inputCtx.destination);
+
+              // Store refs for cleanup
+              sourceNodeRef.current = source;
+              scriptProcessorRef.current = workletNode as any;
+
+              console.log('[LiveAPI] Audio pipeline started');
+            }, 300); // 300ms delay to let server process setup
           },
 
           onmessage: async (message: LiveServerMessage) => {
@@ -221,11 +275,12 @@ const App: React.FC = () => {
             }
           },
 
-          onerror: (e) => {
-            console.error('Live API error:', e);
+          onerror: (e: any) => {
+            console.error('[LiveAPI] Error:', e?.message || e);
             const handle = resumptionManagerRef.current.getHandle();
 
             if (handle && !reconnectionManagerRef.current.isExhausted()) {
+              connectionStateRef.current = ConnectionState.RECONNECTING;
               setConnectionState(ConnectionState.RECONNECTING);
               setError(`Connection lost. Reconnecting (attempt ${reconnectionManagerRef.current.getAttempts() + 1})...`);
 
@@ -238,38 +293,28 @@ const App: React.FC = () => {
             }
           },
 
-          onclose: () => {
-            // Only set disconnected if we're not intentionally reconnecting
-            if (connectionState !== ConnectionState.RECONNECTING) {
+          onclose: (e: any) => {
+            const code = e?.code || 'unknown';
+            const reason = e?.reason || 'no reason';
+            console.log(`[LiveAPI] WebSocket closed: code=${code}, reason=${reason}`);
+
+            // Use the REF, not the stale closure variable!
+            if (connectionStateRef.current !== ConnectionState.RECONNECTING) {
+              connectionStateRef.current = ConnectionState.DISCONNECTED;
               setConnectionState(ConnectionState.DISCONNECTED);
             }
           },
         },
-        config: {
-          responseModalities: [Modality.AUDIO],
-          systemInstruction: SYSTEM_INSTRUCTIONS[activeModuleRef.current],
-          speechConfig: {
-            voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
-          },
-          inputAudioTranscription: {},
-          outputAudioTranscription: {},
-
-          // Context window compression for unlimited sessions
-          contextWindowCompression: {
-            slidingWindow: {},
-          },
-
-          // Session resumption for seamless reconnection
-          sessionResumption: {
-            handle: resumeHandle || null,
-          },
-        } as any,
+        config: liveConfig as any,
       });
 
+      // Also set sessionRef here in case onopen hasn't fired yet
       sessionRef.current = session;
+
     } catch (err: any) {
-      console.error('Session start error:', err);
+      console.error('[LiveAPI] Session start error:', err);
       setError(err.message || 'Failed to initialize session.');
+      connectionStateRef.current = ConnectionState.DISCONNECTED;
       setConnectionState(ConnectionState.DISCONNECTED);
     }
   }, [clearAudioPlayback]);
