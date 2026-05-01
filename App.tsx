@@ -134,8 +134,8 @@ const App: React.FC = () => {
         callbacks: {
           onopen: () => {
             console.log('[LiveAPI] WebSocket opened');
-            // IMPORTANT: Set sessionRef FIRST, before anything else
-            sessionRef.current = session;
+            // NOTE: Cannot reference `session` here — it's still in TDZ
+            // sessionRef.current will be set after ai.live.connect() resolves
             connectionStateRef.current = ConnectionState.CONNECTED;
             setConnectionState(ConnectionState.CONNECTED);
             setError(null);
@@ -146,7 +146,7 @@ const App: React.FC = () => {
             setTimeout(() => {
               // Guard: only set up audio once per session, and only if still connected
               if (audioStarted || connectionStateRef.current !== ConnectionState.CONNECTED) return;
-              if (sessionRef.current !== session) return; // Session changed during delay
+              if (!sessionRef.current) return; // Session not ready or was closed
               audioStarted = true;
 
               // Disconnect previous audio nodes if any
@@ -163,11 +163,12 @@ const App: React.FC = () => {
 
               workletNode.port.onmessage = (e) => {
                 const inputData = e.data; // Float32Array from worklet
-                // Use the local `session` variable — not sessionRef which could point elsewhere
-                if (session && connectionStateRef.current === ConnectionState.CONNECTED && sessionRef.current === session) {
+                // Use sessionRef.current — the local `session` const is in TDZ inside callbacks
+                const currentSession = sessionRef.current;
+                if (currentSession && connectionStateRef.current === ConnectionState.CONNECTED) {
                   const blob = createBlob(inputData);
                   try {
-                    session.sendRealtimeInput({
+                    currentSession.sendRealtimeInput({
                       audio: {
                         mimeType: blob.mimeType,
                         data: blob.data
