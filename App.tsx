@@ -48,11 +48,16 @@ const App: React.FC = () => {
   const resumptionManagerRef = useRef(new SessionResumptionManager());
   const reconnectionManagerRef = useRef(new ReconnectionManager());
   const activeModuleRef = useRef(activeModule);
+  const connectionStateRef = useRef(connectionState);
 
-  // Keep activeModuleRef in sync
+  // Keep refs in sync
   useEffect(() => {
     activeModuleRef.current = activeModule;
   }, [activeModule]);
+
+  useEffect(() => {
+    connectionStateRef.current = connectionState;
+  }, [connectionState]);
 
   const initAudio = async () => {
     if (!audioContextsRef.current) {
@@ -62,6 +67,7 @@ const App: React.FC = () => {
       const output = new (window.AudioContext || (window as any).webkitAudioContext)({
         sampleRate: SESSION_CONFIG.outputSampleRate,
       });
+      await input.audioWorklet.addModule('/audio-worklet.js');
       audioContextsRef.current = { input, output };
     }
     return audioContextsRef.current;
@@ -82,7 +88,6 @@ const App: React.FC = () => {
 
       const ai = new GoogleGenAI({
         apiKey: process.env.API_KEY as string,
-        httpOptions: { apiVersion: SESSION_CONFIG.apiVersion },
       });
 
       const { input: inputCtx } = await initAudio();
@@ -102,25 +107,33 @@ const App: React.FC = () => {
             setGoAwayWarning(null);
             reconnectionManagerRef.current.reset();
 
-            // Set up audio input pipeline with optimized buffer size
+            // Set up audio input pipeline with AudioWorklet
             const source = inputCtx.createMediaStreamSource(stream);
-            const scriptProcessor = inputCtx.createScriptProcessor(
-              SESSION_CONFIG.audioBufferSize, // 1024 for ~64ms latency (was 4096 = 256ms)
-              1,
-              1,
-            );
-            scriptProcessor.onaudioprocess = (e) => {
-              const inputData = e.inputBuffer.getChannelData(0);
-              if (sessionRef.current) {
-                sessionRef.current.sendRealtimeInput({ media: createBlob(inputData) });
+            const workletNode = new AudioWorkletNode(inputCtx, 'audio-processor');
+
+            workletNode.port.onmessage = (e) => {
+              const inputData = e.data; // Float32Array from worklet
+              if (sessionRef.current && connectionStateRef.current === ConnectionState.CONNECTED) {
+                const blob = createBlob(inputData);
+                try {
+                  sessionRef.current.sendRealtimeInput({
+                    audio: {
+                      mimeType: blob.mimeType,
+                      data: blob.data
+                    }
+                  });
+                } catch (e) {
+                  console.debug('Audio stream paused: socket not ready');
+                }
               }
             };
-            source.connect(scriptProcessor);
-            scriptProcessor.connect(inputCtx.destination);
+
+            source.connect(workletNode);
+            workletNode.connect(inputCtx.destination);
 
             // Store refs for cleanup
             sourceNodeRef.current = source;
-            scriptProcessorRef.current = scriptProcessor;
+            scriptProcessorRef.current = workletNode as any; // Using existing ref name for convenience
           },
 
           onmessage: async (message: LiveServerMessage) => {
@@ -234,7 +247,6 @@ const App: React.FC = () => {
         },
         config: {
           responseModalities: [Modality.AUDIO],
-          enableAffectiveDialog: true,
           systemInstruction: SYSTEM_INSTRUCTIONS[activeModuleRef.current],
           speechConfig: {
             voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
@@ -242,14 +254,14 @@ const App: React.FC = () => {
           inputAudioTranscription: {},
           outputAudioTranscription: {},
 
-          // --- Gemini 3.1 new: Context window compression for unlimited sessions ---
+          // Context window compression for unlimited sessions
           contextWindowCompression: {
             slidingWindow: {},
           },
 
-          // --- Gemini 3.1 new: Session resumption for seamless reconnection ---
+          // Session resumption for seamless reconnection
           sessionResumption: {
-            handle: resumeHandle || undefined,
+            handle: resumeHandle || null,
           },
         } as any,
       });
