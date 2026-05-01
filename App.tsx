@@ -29,6 +29,7 @@ const App: React.FC = () => {
   const [transcriptions, setTranscriptions] = useState<TranscriptionEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [goAwayWarning, setGoAwayWarning] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Derived state
   const isConnected = connectionState === ConnectionState.CONNECTED;
@@ -412,10 +413,43 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-slate-50 to-blue-50 text-slate-800 overflow-hidden font-inter selection:bg-emerald-500/30">
+      
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-gradient-to-r from-emerald-500 to-teal-500 z-30 flex items-center justify-between px-4 shadow-md">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center font-outfit font-black text-white shadow-sm border border-white/30">
+            <span className="text-xl">🌟</span>
+          </div>
+          <h1 className="font-outfit font-bold text-lg tracking-tight text-white leading-none">English Mastery</h1>
+        </div>
+        <button 
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="text-white p-2 focus:outline-none"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="md:hidden mobile-sidebar-overlay animate-fade-in"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       {/* Sidebar: Learning Modules */}
-      <aside className="w-80 flex-shrink-0 bg-white border-r border-slate-200 flex flex-col z-20 shadow-xl relative">
-        <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-emerald-500 to-teal-500">
+      <aside className={`
+        fixed md:relative top-0 left-0 bottom-0 z-50
+        w-[85%] max-w-[340px] md:w-80 flex-shrink-0 
+        bg-white border-r border-slate-200 flex flex-col shadow-2xl md:shadow-xl
+        transform transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
+        {/* Sidebar Header - Desktop Only */}
+        <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-emerald-500 to-teal-500 hidden md:block">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center font-outfit font-black text-white shadow-lg border border-white/30">
               <span className="text-2xl">🌟</span>
@@ -427,7 +461,15 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 custom-scrollbar space-y-6 bg-slate-50">
+        {/* Mobile Sidebar Close Header */}
+        <div className="md:hidden flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
+           <span className="font-outfit font-bold text-slate-700">Menu</span>
+           <button onClick={() => setSidebarOpen(false)} className="text-slate-400 hover:text-slate-600">
+             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+           </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 md:p-5 custom-scrollbar space-y-6 bg-slate-50">
           <div>
             <div className="flex items-center justify-between px-2 mb-4">
               <h2 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Learning Modules</h2>
@@ -440,15 +482,18 @@ const App: React.FC = () => {
                   module={m}
                   isActive={activeModule === m}
                   icon={MODULE_ICONS[m]}
-                  onClick={() => handleModuleSwitch(m)}
+                  onClick={() => {
+                    handleModuleSwitch(m);
+                    setSidebarOpen(false); // Close on mobile after selection
+                  }}
                 />
               ))}
             </div>
           </div>
         </div>
 
-        {/* Audio Status Panel */}
-        <div className="p-5 bg-white border-t border-slate-200">
+        {/* Audio Status Panel - Desktop Only */}
+        <div className="hidden md:block p-5 bg-white border-t border-slate-200">
           <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-4 border border-slate-200 mb-4 shadow-sm">
             <div className="flex justify-between items-center mb-3">
               <div className="flex items-center gap-2">
@@ -494,18 +539,19 @@ const App: React.FC = () => {
       </aside>
 
       {/* Main Learning Area */}
-      <main className="flex-1 flex flex-col relative bg-gradient-to-br from-white to-slate-50">
+      {/* Add pt-16 on mobile for the fixed header, pb-32 for the fixed bottom bar */}
+      <main className="flex-1 flex flex-col relative bg-gradient-to-br from-white to-slate-50 md:pt-0 pt-16 md:pb-0 pb-[120px]">
 
         {/* Status Header */}
-        <header className="h-16 flex-shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur-md flex items-center justify-between px-8 z-20 sticky top-0 shadow-sm">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-full border border-slate-200">
+        <header className="h-14 md:h-16 flex-shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur-md flex items-center justify-between px-4 md:px-8 z-20 sticky top-0 shadow-sm">
+          <div className="flex items-center gap-3 md:gap-6 w-full md:w-auto overflow-x-auto no-scrollbar pb-1 md:pb-0">
+            <div className="flex-shrink-0 flex items-center gap-2 md:gap-3 px-3 md:px-4 py-1.5 md:py-2 bg-slate-50 rounded-full border border-slate-200">
               <div className={`w-2 h-2 rounded-full ${
                 isConnected ? 'bg-emerald-500 shadow-lg shadow-emerald-500/50'
                 : isReconnecting ? 'bg-amber-500 shadow-lg shadow-amber-500/50'
                 : 'bg-slate-400'
               }`}></div>
-              <span className={`text-xs font-semibold uppercase tracking-wide ${
+              <span className={`text-[10px] md:text-xs font-semibold uppercase tracking-wide whitespace-nowrap ${
                 isConnected ? 'text-emerald-600'
                 : isReconnecting ? 'text-amber-600'
                 : 'text-slate-500'
@@ -514,21 +560,21 @@ const App: React.FC = () => {
               </span>
             </div>
 
-            <div className="hidden md:flex items-center gap-4 text-xs text-slate-600">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">Module:</span>
-                <span className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-200">{activeModule}</span>
+            <div className="flex items-center gap-2 md:gap-4 text-[10px] md:text-xs text-slate-600 flex-shrink-0">
+              <div className="flex items-center gap-1.5 md:gap-2">
+                <span className="font-semibold hidden sm:inline">Module:</span>
+                <span className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-md border border-emerald-200 whitespace-nowrap truncate max-w-[120px] md:max-w-none">{activeModule}</span>
               </div>
               {isModelGenerating && (
-                <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-600 rounded-md border border-blue-200">
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-50 text-blue-600 rounded-md border border-blue-200 flex-shrink-0">
                   <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
-                  <span className="font-medium">Generating</span>
+                  <span className="font-medium hidden sm:inline">Generating</span>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-3">
             {goAwayWarning && (
               <div className="px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
                 <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
@@ -541,7 +587,7 @@ const App: React.FC = () => {
                 <span className="text-xs font-semibold text-rose-600">{error}</span>
               </div>
             )}
-            <div className="px-4 py-2 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg text-xs font-semibold text-purple-700 shadow-sm">
+            <div className="px-4 py-2 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg text-xs font-semibold text-purple-700 shadow-sm whitespace-nowrap">
               🤖 Gemini 3.1 Live
             </div>
           </div>
@@ -549,61 +595,77 @@ const App: React.FC = () => {
 
         {/* Conversation Container */}
         <div className="flex-1 overflow-hidden relative flex flex-col">
+          {/* Mobile Errors & Warnings - Absolute positioned inside the chat area */}
+          <div className="md:hidden absolute top-0 left-0 right-0 z-10 px-4 pt-4 flex flex-col gap-2 pointer-events-none">
+            {goAwayWarning && (
+              <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2 shadow-sm pointer-events-auto">
+                <span className="w-2 h-2 bg-amber-500 rounded-full animate-pulse flex-shrink-0"></span>
+                <span className="text-[11px] font-semibold text-amber-600">{goAwayWarning}</span>
+              </div>
+            )}
+            {error && (
+              <div className="px-3 py-2 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-2 shadow-sm pointer-events-auto">
+                <span className="w-2 h-2 bg-rose-500 rounded-full animate-pulse flex-shrink-0"></span>
+                <span className="text-[11px] font-semibold text-rose-600">{error}</span>
+              </div>
+            )}
+          </div>
+
           <div
             ref={scrollRef}
-            className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar scroll-smooth"
+            className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 md:space-y-6 custom-scrollbar scroll-smooth"
           >
             {transcriptions.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center select-none">
-                <div className="w-32 h-32 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center mb-6 shadow-2xl shadow-emerald-500/20 relative animate-float">
+              <div className="h-full flex flex-col items-center justify-center select-none py-4 md:py-10">
+                <div className="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-full flex items-center justify-center mb-6 shadow-2xl shadow-emerald-500/20 relative animate-float">
                   <div className="absolute inset-0 rounded-full border-4 border-white/30"></div>
-                  <span className="text-6xl">🎓</span>
+                  <span className="text-5xl md:text-6xl">🎓</span>
                 </div>
-                <h2 className="text-2xl font-outfit font-bold text-slate-800 mb-3 tracking-tight">Ready to Learn English!</h2>
-                <p className="text-sm text-slate-600 text-center max-w-md leading-relaxed">
-                  {INITIAL_MESSAGE}<br />
-                  <span className="text-emerald-600 font-medium">Click "Start Learning" to begin your practice session.</span>
+                <h2 className="text-xl md:text-2xl font-outfit font-bold text-slate-800 mb-3 tracking-tight text-center px-4">Ready to Learn English!</h2>
+                <p className="text-xs md:text-sm text-slate-600 text-center max-w-md leading-relaxed px-4">
+                  {INITIAL_MESSAGE}<br className="hidden md:block"/>
+                  <span className="text-emerald-600 font-medium block mt-2 md:inline md:mt-0">Click "Start Learning" to begin your practice session.</span>
                 </p>
 
-                <div className="mt-8 grid grid-cols-3 gap-4 text-center">
-                  <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-                    <div className="text-2xl mb-2">🗣️</div>
-                    <div className="text-xs font-semibold text-slate-700">Speak Naturally</div>
+                <div className="mt-6 md:mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 text-center px-4 w-full max-w-2xl">
+                  <div className="p-3 md:p-4 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-row sm:flex-col items-center gap-3 sm:gap-0 justify-center">
+                    <div className="text-xl md:text-2xl sm:mb-2">🗣️</div>
+                    <div className="text-[11px] md:text-xs font-semibold text-slate-700">Speak Naturally</div>
                   </div>
-                  <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-                    <div className="text-2xl mb-2">👂</div>
-                    <div className="text-xs font-semibold text-slate-700">Get Feedback</div>
+                  <div className="p-3 md:p-4 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-row sm:flex-col items-center gap-3 sm:gap-0 justify-center">
+                    <div className="text-xl md:text-2xl sm:mb-2">👂</div>
+                    <div className="text-[11px] md:text-xs font-semibold text-slate-700">Get Feedback</div>
                   </div>
-                  <div className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-                    <div className="text-2xl mb-2">📈</div>
-                    <div className="text-xs font-semibold text-slate-700">Track Progress</div>
+                  <div className="p-3 md:p-4 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-row sm:flex-col items-center gap-3 sm:gap-0 justify-center">
+                    <div className="text-xl md:text-2xl sm:mb-2">📈</div>
+                    <div className="text-[11px] md:text-xs font-semibold text-slate-700">Track Progress</div>
                   </div>
                 </div>
 
-                <div className="mt-6 flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg">
-                  <span className="text-xs font-semibold text-purple-700">✨ Powered by Gemini 3.1 Flash Live — Unlimited Sessions</span>
+                <div className="mt-6 flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-purple-50 border border-purple-200 rounded-lg mx-4">
+                  <span className="text-[10px] md:text-xs font-semibold text-purple-700 text-center">✨ Powered by Gemini 3.1 Flash Live</span>
                 </div>
               </div>
             ) : (
               transcriptions.map((entry) => (
                 <div
                   key={entry.id}
-                  className={`flex flex-col max-w-4xl w-full ${entry.role === 'user' ? 'items-end ml-auto' : 'items-start mr-auto'
+                  className={`flex flex-col w-[92%] md:max-w-3xl ${entry.role === 'user' ? 'items-end ml-auto' : 'items-start mr-auto'
                     } animate-fade-in-up`}
                 >
-                  <div className={`flex items-center gap-2 mb-2 ${entry.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <span className={`text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${entry.role === 'user'
+                  <div className={`flex items-center gap-1.5 md:gap-2 mb-1.5 md:mb-2 ${entry.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <span className={`text-[10px] md:text-xs font-bold uppercase tracking-wider px-2 md:px-3 py-0.5 md:py-1 rounded-full border ${entry.role === 'user'
                       ? 'bg-blue-50 border-blue-200 text-blue-700'
                       : 'bg-emerald-50 border-emerald-200 text-emerald-700'
                       }`}>
                       {entry.role === 'user' ? '👤 You' : '🤖 AI Coach'}
                     </span>
-                    <span className="text-xs text-slate-400">
-                      {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    <span className="text-[10px] md:text-xs text-slate-400">
+                      {new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
 
-                  <div className={`px-6 py-4 rounded-2xl border shadow-sm text-sm leading-relaxed max-w-[85%] ${entry.role === 'user'
+                  <div className={`px-4 md:px-6 py-3 md:py-4 rounded-2xl border shadow-sm text-[13px] md:text-sm leading-relaxed ${entry.role === 'user'
                     ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-400 text-white rounded-tr-sm'
                     : 'bg-white border-slate-200 text-slate-800 rounded-tl-sm'
                     }`}>
@@ -615,8 +677,8 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Footer Info Bar */}
-        <footer className="h-12 border-t border-slate-200 bg-white flex items-center justify-between px-8 text-xs text-slate-500">
+        {/* Footer Info Bar (Desktop) */}
+        <footer className="hidden md:flex h-12 border-t border-slate-200 bg-white items-center justify-between px-8 text-xs text-slate-500 flex-shrink-0 z-20">
           <div className="flex items-center gap-6">
             <span className="font-semibold">English Mastery Portal</span>
             <span className="text-emerald-600">Gemini 3.1 Flash Live</span>
@@ -629,6 +691,44 @@ const App: React.FC = () => {
           </div>
           <div className="font-mono">Session: {isConnected || isReconnecting ? sessionId : '---'}</div>
         </footer>
+
+        {/* Mobile Fixed Bottom Action Bar */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.1)] z-40 safe-bottom">
+          <div className="p-3 flex flex-col gap-3">
+            <div className="flex items-center justify-between px-1">
+               <div className="flex items-center gap-2">
+                 <div className={`w-2 h-2 rounded-full ${
+                    isConnected ? 'bg-emerald-500 animate-pulse shadow-lg shadow-emerald-500/50'
+                    : isReconnecting ? 'bg-amber-500 animate-pulse shadow-lg shadow-amber-500/50'
+                    : 'bg-slate-300'
+                  }`}></div>
+                 <span className="text-[11px] font-semibold text-slate-700">Voice Stream</span>
+               </div>
+               
+               <div className="w-1/2 h-8 flex items-center justify-center bg-slate-50 rounded border border-slate-100 overflow-hidden px-2">
+                 <AudioVisualizer isActive={isConnected} isSpeaking={isSpeaking} />
+               </div>
+            </div>
+
+            <button
+              onClick={() => isConnected || isReconnecting ? stopSession() : startSession()}
+              disabled={connectionState === ConnectionState.CONNECTING}
+              className={`w-full py-3 rounded-xl font-bold text-[13px] uppercase tracking-wide transition-all duration-200 shadow-md active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed ${
+                isConnected || isReconnecting
+                  ? 'bg-gradient-to-r from-rose-500 to-red-500 text-white hover:from-rose-600 hover:to-red-600 shadow-rose-500/30'
+                  : connectionState === ConnectionState.CONNECTING
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-amber-500/30'
+                    : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600 shadow-emerald-500/30'
+              }`}
+            >
+              {isConnected ? '🛑 End Session'
+                : isReconnecting ? '🔄 Reconnecting...'
+                : connectionState === ConnectionState.CONNECTING ? '⏳ Connecting...'
+                : '🎙️ Start Learning'}
+            </button>
+          </div>
+        </div>
+
       </main>
     </div>
   );
