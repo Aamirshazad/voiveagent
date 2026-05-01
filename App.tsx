@@ -622,9 +622,8 @@ const App: React.FC = () => {
                   <span className="text-5xl md:text-6xl">🎓</span>
                 </div>
                 <h2 className="text-xl md:text-2xl font-outfit font-bold text-slate-800 mb-3 tracking-tight text-center px-4">Ready to Learn English!</h2>
-                <p className="text-xs md:text-sm text-slate-600 text-center max-w-md leading-relaxed px-4">
-                  {INITIAL_MESSAGE}<br className="hidden md:block"/>
-                  <span className="text-emerald-600 font-medium block mt-2 md:inline md:mt-0">Click "Start Learning" to begin your practice session.</span>
+                <p className="text-xs md:text-sm text-slate-600 text-center max-w-md leading-relaxed px-4 mt-2">
+                  <span className="text-emerald-600 font-medium">Click "Start Learning" to begin your practice session.</span>
                 </p>
 
                 <div className="mt-6 md:mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 text-center px-4 w-full max-w-2xl">
@@ -640,10 +639,6 @@ const App: React.FC = () => {
                     <div className="text-xl md:text-2xl sm:mb-2">📈</div>
                     <div className="text-[11px] md:text-xs font-semibold text-slate-700">Track Progress</div>
                   </div>
-                </div>
-
-                <div className="mt-6 flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-purple-50 border border-purple-200 rounded-lg mx-4">
-                  <span className="text-[10px] md:text-xs font-semibold text-purple-700 text-center">✨ Powered by Gemini 3.1 Flash Live</span>
                 </div>
               </div>
             ) : (
