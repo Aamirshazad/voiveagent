@@ -70,6 +70,13 @@ const App: React.FC = () => {
       await input.audioWorklet.addModule('/audio-worklet.js');
       audioContextsRef.current = { input, output };
     }
+
+    // Browsers suspend AudioContexts until explicitly resumed after user gesture
+    const { input, output } = audioContextsRef.current;
+    if (input.state === 'suspended') await input.resume();
+    if (output.state === 'suspended') await output.resume();
+    console.log(`[LiveAPI] AudioContext states: input=${input.state}, output=${output.state}`);
+
     return audioContextsRef.current;
   };
 
@@ -192,12 +199,22 @@ const App: React.FC = () => {
           },
 
           onmessage: async (message: LiveServerMessage) => {
+            // Debug: log message types
+            if (message.serverContent?.modelTurn) {
+              console.log('[LiveAPI] Received model turn with', message.serverContent.modelTurn.parts?.length || 0, 'parts');
+            }
+            if (message.serverContent?.turnComplete) {
+              console.log('[LiveAPI] Turn complete');
+            }
+
             // --- Audio playback ---
             const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (base64Audio) {
               setIsSpeaking(true);
               setIsModelGenerating(true);
               const { output } = audioContextsRef.current!;
+              // Ensure output context is running for playback
+              if (output.state === 'suspended') await output.resume();
               nextStartTimeRef.current = Math.max(nextStartTimeRef.current, output.currentTime);
               const audioBuffer = await decodeAudioData(
                 decode(base64Audio),
@@ -309,8 +326,17 @@ const App: React.FC = () => {
         config: liveConfig as any,
       });
 
-      // Also set sessionRef here in case onopen hasn't fired yet
+      // Set sessionRef after connect() resolves (onopen may have already fired)
       sessionRef.current = session;
+
+      // Send an initial text message to trigger the model's greeting
+      // The system instruction tells the AI to speak first, but it needs input to activate
+      try {
+        session.sendRealtimeInput({ text: 'Hello! I want to practice English.' });
+        console.log('[LiveAPI] Initial greeting trigger sent');
+      } catch (e) {
+        console.debug('[LiveAPI] Could not send initial greeting:', (e as Error).message);
+      }
 
     } catch (err: any) {
       console.error('[LiveAPI] Session start error:', err);
